@@ -14,6 +14,7 @@
 - DELETE existence check via RowsAffected(), not error handling — unlike SELECT (sql.ErrNoRows), a DELETE on a non-existent id succeeds silently with 0 rows affected; RowsAffected() is the only way to detect "nothing was deleted" and return 404 instead of a false 204
 - PATCH uses SQLite's RETURNING clause (supported since SQLite 3.35, 2021) instead of a separate UPDATE + SELECT — one round-trip instead of two, and reuses the same QueryRow+Scan+errors.Is(sql.ErrNoRows) pattern already used for GET/{id}, so a missing id naturally falls out as 404 without needing RowsAffected() here
 - UpdateExpenseRequest fields are pointers (*float64, *string), not plain values — required to distinguish "client didn't send this field" (nil) from "client explicitly sent an empty value" (non-nil pointing to zero value); a plain float64/string can't make that distinction
+- Relied on Go 1.22+ ServeMux's built-in method+path pattern matching to disambiguate GET /expenses/{id} from GET /expenses/summary automatically (literal segments take precedence over wildcards), avoiding the need for route ordering tricks common in older routers
 
 ## What I'd Improve With More Time
 - Amount stored as float64, not integer cents / decimal — known precision risk for financial data, acceptable for this scope
