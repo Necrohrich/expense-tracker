@@ -22,6 +22,9 @@
 - Empty result set returns `[]` in JSON, not `null` — initialized as `expenses := []Expense{}` 
   instead of `var expenses []Expense` (Go's nil slice serializes to `null`, which most API 
   clients don't expect from a list endpoint)
+- DELETE existence check via RowsAffected(), not error handling — unlike SELECT (sql.ErrNoRows), 
+  a DELETE on a non-existent id succeeds silently with 0 rows affected; RowsAffected() is the only 
+  way to detect "nothing was deleted" and return 404 instead of a false 204
 
 ## What I'd Improve With More Time
 - Amount stored as float64, not integer cents / decimal — known precision risk for financial data, acceptable for this scope
