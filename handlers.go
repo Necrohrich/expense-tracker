@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -91,5 +92,29 @@ func getExpensesHandler(db *sql.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(expenses)
+	}
+}
+
+func getExpenseHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+
+		var e Expense
+		err := db.QueryRow(
+            "SELECT id, amount, category, note, spent_on, created_at FROM expenses WHERE id = ?",
+            id,
+        ).Scan(&e.ID, &e.Amount, &e.Category, &e.Note, &e.SpentOn, &e.CreatedAt)
+
+		if errors.Is(err, sql.ErrNoRows) { // bes practice for search error, we can use == now but is not preffered
+			writeJSONError(w, http.StatusNotFound, "expense not found")
+			return
+		}
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to fetch expense")
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(e)
 	}
 }
