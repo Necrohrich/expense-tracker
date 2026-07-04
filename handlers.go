@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -73,7 +74,24 @@ func createExpenseHandler(db *sql.DB) http.HandlerFunc {
 
 func getExpensesHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rows, err := db.Query("SELECT id, amount, category, note, spent_on, created_at FROM expenses ORDER BY spent_on DESC")
+		pageStr := r.URL.Query().Get("page")
+		page, err := strconv.Atoi(pageStr)
+		if err != nil || page < 1 {
+			page = 1
+		}
+
+		limitStr := r.URL.Query().Get("limit")
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil || limit < 1 {
+			limit = 20
+		}
+
+		offset := (page - 1) * limit
+
+		rows, err := db.Query(
+			"SELECT id, amount, category, note, spent_on, created_at FROM expenses ORDER BY spent_on DESC LIMIT ? OFFSET ?",
+			limit, offset,
+		)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "failed to fetch expenses")
             return

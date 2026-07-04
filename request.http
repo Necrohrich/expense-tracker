@@ -47,3 +47,9 @@ DELETE http://localhost:8080/expenses/c48e7d4d-097c-48cf-b06a-8ff3b53566ce
 
 ### Summary by category
 GET http://localhost:8080/expenses/summary
+
+### With pagination
+GET http://localhost:8080/expenses?page=1&limit=2
+
+### Without params (default limit=20)
+GET http://localhost:8080/expenses

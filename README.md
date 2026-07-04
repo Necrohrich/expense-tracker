@@ -18,10 +18,13 @@
 - Multi-stage Dockerfile: golang:1.26-alpine builder stage compiles the binary, final stage is bare alpine:latest with only the compiled binary copied in — no Go toolchain or source code in the runtime image, minimizing size and attack surface
 - go.mod/go.sum copied and go mod download run before copying the rest of the source, so dependency downloads stay cached across builds when only application code changes
 - PORT and DB_PATH configurable via environment variables (os.Getenv), falling back to sensible defaults (8080, expenses.db) when unset — no config file/library needed for just two values
+- GET /expenses supports ?page=&limit= query params, defaulting to page=1/limit=20 when absent or invalid — invalid values fall back silently rather than erroring, since pagination affects display only, not data integrity (unlike amount validation on writes)
 
 ## What I'd Improve With More Time
 - Amount stored as float64, not integer cents / decimal — known precision risk for financial data, acceptable for this scope
-- GET /expenses is O(n) time and space with no pagination — fine at this scale, would add LIMIT/OFFSET and an index on spent_on for larger datasets (avoids in-memory sort)
+- No index on spent_on — ORDER BY currently requires an in-memory sort; fine at this scale, 
+  would add an index for larger datasets
+- Pagination doesn't return total count/page metadata (e.g. total_pages) — client can't tell if there are more pages without requesting page+1 and checking for an empty result
 
 ## Assumptions
 - spent_on stored as string (YYYY-MM-DD), validated at two layers: SQL CHECK(GLOB) catches malformed format at the DB level, application-layer time.Parse (handlers.go, WIP) catches invalid-but-well-formatted dates like 2026-13-45
