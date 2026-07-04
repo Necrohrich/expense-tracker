@@ -205,3 +205,29 @@ func updateExpenseHandler(db *sql.DB) http.HandlerFunc {
         json.NewEncoder(w).Encode(e)
     }
 }
+
+func getSummaryHandler(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+		rows, err := db.Query("SELECT category, SUM(amount) FROM expenses GROUP BY category")
+		if err != nil {
+            writeJSONError(w, http.StatusInternalServerError, "failed to fetch summary")
+            return
+        }
+		defer rows.Close()
+
+		summary := map[string]float64{}
+		for rows.Next() {
+			var category string
+			var total float64
+			err := rows.Scan(&category, &total)
+			if err != nil{
+				writeJSONError(w, http.StatusInternalServerError, "failed to scan row")
+                return
+			}
+			summary[category] = total
+		}
+		
+		w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(summary)
+	}
+}

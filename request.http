@@ -4,6 +4,18 @@ Content-Type: application/json
 {"amount": 24.50, "category": "food", "note": "Lunch", "spent_on": "2026-05-08"}
 
 ### 
+POST http://localhost:8080/expenses
+Content-Type: application/json
+
+{"amount": 33.53, "category": "food", "spent_on": "2026-05-12"}
+
+### 
+POST http://localhost:8080/expenses
+Content-Type: application/json
+
+{"amount": 100, "category": "furniture", "spent_on": "2026-02-12"}
+
+### 
 GET http://localhost:8080/expenses
 
 ### Existing id
@@ -18,5 +30,20 @@ Content-Type: application/json
 
 {"amount": 50.50}
 
+### Update non-existing id
+PATCH http://localhost:8080/expenses/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{"amount": 10}
+
+### Update with empty body
+PATCH http://localhost:8080/expenses/c48e7d4d-097c-48cf-b06a-8ff3b53566ce
+Content-Type: application/json
+
+{}
+
 ### Delete by id 
 DELETE http://localhost:8080/expenses/c48e7d4d-097c-48cf-b06a-8ff3b53566ce
+
+### Summary by category
+GET http://localhost:8080/expenses/summary
