@@ -7,7 +7,10 @@ Content-Type: application/json
 GET http://localhost:8080/expenses
 
 ### Existing id
-GET http://localhost:8080/expenses/df2c7745-5e5e-4f4c-a9bb-a7c3ba82c7a0
+GET http://localhost:8080/expenses/c48e7d4d-097c-48cf-b06a-8ff3b53566ce
 
 ### Non-existing id  
 GET http://localhost:8080/expenses/00000000-0000-0000-0000-000000000000
+
+### Delete by id 
+DELETE http://localhost:8080/expenses/c48e7d4d-097c-48cf-b06a-8ff3b53566ce

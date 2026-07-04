@@ -118,3 +118,28 @@ func getExpenseHandler(db *sql.DB) http.HandlerFunc {
         json.NewEncoder(w).Encode(e)
 	}
 }
+
+func deleteExpenseHandler(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        id := r.PathValue("id")
+
+        result, err := db.Exec("DELETE FROM expenses WHERE id = ?", id)
+        if err != nil {
+            writeJSONError(w, http.StatusInternalServerError, "failed to delete expense")
+            return
+        }
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to check delete result")
+			return
+		}
+
+		if rowsAffected == 0 {
+			writeJSONError(w, http.StatusNotFound, "expense not found")
+			return
+		}
+
+        w.WriteHeader(http.StatusNoContent) // 204
+    }
+}
