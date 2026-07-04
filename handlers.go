@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -141,5 +142,66 @@ func deleteExpenseHandler(db *sql.DB) http.HandlerFunc {
 		}
 
         w.WriteHeader(http.StatusNoContent) // 204
+    }
+}
+
+func updateExpenseHandler(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        id := r.PathValue("id")
+
+        var req UpdateExpenseRequest
+        err := json.NewDecoder(r.Body).Decode(&req)
+        if err != nil {
+            writeJSONError(w, http.StatusBadRequest, "invalid JSON body")
+            return
+        }
+
+        if req.Amount != nil && *req.Amount <= 0 {
+            writeJSONError(w, http.StatusBadRequest, "amount must be greater than 0")
+            return
+        }
+        if req.Category != nil && *req.Category == "" {
+            writeJSONError(w, http.StatusBadRequest, "category cannot be empty")
+            return
+        }
+
+        var setClauses []string
+        var args []any
+
+        if req.Amount != nil {
+            setClauses = append(setClauses, "amount = ?")
+            args = append(args, *req.Amount)
+        }
+        if req.Category != nil {
+            setClauses = append(setClauses, "category = ?")
+            args = append(args, *req.Category)
+        }
+        if req.Note != nil {
+            setClauses = append(setClauses, "note = ?")
+            args = append(args, *req.Note)
+        }
+
+        if len(setClauses) == 0 {
+            writeJSONError(w, http.StatusBadRequest, "at least one field (amount, category, note) must be provided")
+            return
+        }
+
+        args = append(args, id)
+        query := "UPDATE expenses SET " + strings.Join(setClauses, ", ") +
+            " WHERE id = ? RETURNING id, amount, category, note, spent_on, created_at"
+
+        var e Expense
+        err = db.QueryRow(query, args...).Scan(&e.ID, &e.Amount, &e.Category, &e.Note, &e.SpentOn, &e.CreatedAt)
+        if errors.Is(err, sql.ErrNoRows) {
+            writeJSONError(w, http.StatusNotFound, "expense not found")
+            return
+        }
+        if err != nil {
+            writeJSONError(w, http.StatusInternalServerError, "failed to update expense")
+            return
+        }
+
+        w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(e)
     }
 }

@@ -12,5 +12,11 @@ GET http://localhost:8080/expenses/c48e7d4d-097c-48cf-b06a-8ff3b53566ce
 ### Non-existing id  
 GET http://localhost:8080/expenses/00000000-0000-0000-0000-000000000000
 
+### Updated by id 
+PATCH http://localhost:8080/expenses/c48e7d4d-097c-48cf-b06a-8ff3b53566ce
+Content-Type: application/json
+
+{"amount": 50.50}
+
 ### Delete by id 
 DELETE http://localhost:8080/expenses/c48e7d4d-097c-48cf-b06a-8ff3b53566ce
