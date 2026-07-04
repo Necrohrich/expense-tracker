@@ -1,7 +1,7 @@
 # Expense Tracker API
 
 ## How to Run
-<!-- TODO Saturday -->
+- Docker: `docker build -t expense-tracker .` then `docker run -p 8080:8080 -v ${PWD}/expenses.db:/app/expenses.db expense-tracker`
 
 ## Tech Choices
 - Go 1.26, stdlib net/http (1.22+ method+path routing) — no framework, API surface too small to justify Gin/Chi
@@ -15,6 +15,8 @@
 - PATCH uses SQLite's RETURNING clause (supported since SQLite 3.35, 2021) instead of a separate UPDATE + SELECT — one round-trip instead of two, and reuses the same QueryRow+Scan+errors.Is(sql.ErrNoRows) pattern already used for GET/{id}, so a missing id naturally falls out as 404 without needing RowsAffected() here
 - UpdateExpenseRequest fields are pointers (*float64, *string), not plain values — required to distinguish "client didn't send this field" (nil) from "client explicitly sent an empty value" (non-nil pointing to zero value); a plain float64/string can't make that distinction
 - Relied on Go 1.22+ ServeMux's built-in method+path pattern matching to disambiguate GET /expenses/{id} from GET /expenses/summary automatically (literal segments take precedence over wildcards), avoiding the need for route ordering tricks common in older routers
+- Multi-stage Dockerfile: golang:1.26-alpine builder stage compiles the binary, final stage is bare alpine:latest with only the compiled binary copied in — no Go toolchain or source code in the runtime image, minimizing size and attack surface
+- go.mod/go.sum copied and go mod download run before copying the rest of the source, so dependency downloads stay cached across builds when only application code changes
 
 ## What I'd Improve With More Time
 - Amount stored as float64, not integer cents / decimal — known precision risk for financial data, acceptable for this scope
