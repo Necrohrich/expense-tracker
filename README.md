@@ -17,6 +17,7 @@
 - Relied on Go 1.22+ ServeMux's built-in method+path pattern matching to disambiguate GET /expenses/{id} from GET /expenses/summary automatically (literal segments take precedence over wildcards), avoiding the need for route ordering tricks common in older routers
 - Multi-stage Dockerfile: golang:1.26-alpine builder stage compiles the binary, final stage is bare alpine:latest with only the compiled binary copied in — no Go toolchain or source code in the runtime image, minimizing size and attack surface
 - go.mod/go.sum copied and go mod download run before copying the rest of the source, so dependency downloads stay cached across builds when only application code changes
+- PORT and DB_PATH configurable via environment variables (os.Getenv), falling back to sensible defaults (8080, expenses.db) when unset — no config file/library needed for just two values
 
 ## What I'd Improve With More Time
 - Amount stored as float64, not integer cents / decimal — known precision risk for financial data, acceptable for this scope

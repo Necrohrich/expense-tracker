@@ -3,10 +3,21 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 )
 
 func main() {
-	db, err := InitDB("expenses.db")
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "expenses.db"
+	}
+
+	port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
+
+	db, err := InitDB(dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -20,6 +31,6 @@ func main() {
 	mux.HandleFunc("PATCH /expenses/{id}", updateExpenseHandler(db))
 	mux.HandleFunc("GET /expenses/summary", getSummaryHandler(db))
 
-	log.Println("Server starting on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Println("Server starting on :" + port)
+	log.Fatal(http.ListenAndServe(":"+port, mux))
 }
