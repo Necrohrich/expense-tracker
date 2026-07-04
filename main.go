@@ -13,7 +13,7 @@ func main() {
 	defer db.Close()
 
 	mux := http.NewServeMux()
-	// routers
+	mux.HandleFunc("POST /expenses", createExpenseHandler(db))
 
 	log.Println("Server starting on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))

@@ -1,0 +1,70 @@
+package main
+
+import (
+	"database/sql"
+	"encoding/json"
+	"net/http"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+func writeJSONError(w http.ResponseWriter, status int, message string) {
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(status)
+    json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
+
+func createExpenseHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req CreateExpenseRequest
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid JSON body")
+			return 
+		}
+
+		if req.Amount <= 0 {
+			writeJSONError(w, http.StatusBadRequest, "amount must be greater than 0")
+			return 
+		}
+		if req.Category == "" {
+			writeJSONError(w, http.StatusBadRequest, "category is required")
+			return 
+		}
+		if req.SpentOn == "" {
+			writeJSONError(w, http.StatusBadRequest, "spent_on is required")
+			return 
+		}
+
+		_, err = time.Parse("2006-01-02", req.SpentOn)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "spent_on must be a valid date in YYYY-MM-DD format")
+			return
+		}
+
+		now := time.Now().UTC().Format(time.RFC3339)
+
+		newExpense := Expense{
+			ID:        uuid.New().String(),
+			Amount:    req.Amount,
+			Category:  req.Category,
+			Note:      req.Note,
+			SpentOn:   req.SpentOn,
+			CreatedAt: now,
+		}
+
+		_, err = db.Exec(
+			"INSERT INTO expenses (id, amount, category, note, spent_on, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+			newExpense.ID, newExpense.Amount, newExpense.Category, newExpense.Note, newExpense.SpentOn, newExpense.CreatedAt,
+		)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to save expense")
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(newExpense)
+	}
+}
