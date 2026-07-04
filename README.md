@@ -19,9 +19,14 @@
   zero setup for the reviewer (no separate app, no import step), doubles as living API 
   documentation, and lets me demo every endpoint live during the interview by just clicking 
   "Send Request" next to each one
+- Empty result set returns `[]` in JSON, not `null` — initialized as `expenses := []Expense{}` 
+  instead of `var expenses []Expense` (Go's nil slice serializes to `null`, which most API 
+  clients don't expect from a list endpoint)
 
 ## What I'd Improve With More Time
 - Amount stored as float64, not integer cents / decimal — known precision risk for financial data, acceptable for this scope
+- GET /expenses is O(n) time and space with no pagination — fine at this scale, would add 
+  LIMIT/OFFSET and an index on spent_on for larger datasets (avoids in-memory sort)
 
 ## Assumptions
 - spent_on stored as string (YYYY-MM-DD), validated at two layers: SQL CHECK(GLOB) catches malformed 
@@ -33,3 +38,8 @@
   as the single-character wildcard, not `_` (that's LIKE's syntax) — `_` in GLOB is a literal 
   character. The constraint `CHECK(spent_on GLOB '____-__-__')` silently rejected every valid 
   date. Fixed to `'????-??-??'
+- Spent ~15 min on spent_on/created_at coming back as full timestamps (e.g. "2026-05-08T00:00:00Z" 
+  instead of "2026-05-08") despite being stored as plain strings. Root cause: SQLite type affinity — 
+  columns declared as DATE/DATETIME caused the driver to auto-convert to time.Time on read, which 
+  database/sql then reformatted as RFC3339. Fixed by declaring both columns as TEXT, matching how 
+  they're actually used (plain strings, validated at the application layer).
