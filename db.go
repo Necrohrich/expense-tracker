@@ -17,8 +17,8 @@ func InitDB(path string) (*sql.DB, error) {
 		amount REAL NOT NULL CHECK (amount > 0),
 		category TEXT NOT NULL,
 		note TEXT,
-		spent_on DATE NOT NULL CHECK(spent_on GLOB '????-??-??'),
-		created_at DATETIME
+		spent_on TEXT NOT NULL CHECK(spent_on GLOB '????-??-??'),
+		created_at TEXT
 	)`
 	_, err = db.Exec(createTableSQL)
 	if err != nil {

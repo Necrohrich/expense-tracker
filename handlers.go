@@ -68,3 +68,28 @@ func createExpenseHandler(db *sql.DB) http.HandlerFunc {
 		json.NewEncoder(w).Encode(newExpense)
 	}
 }
+
+func getExpensesHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		rows, err := db.Query("SELECT id, amount, category, note, spent_on, created_at FROM expenses ORDER BY spent_on DESC")
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to fetch expenses")
+            return
+		}
+		defer rows.Close()
+
+		expenses := []Expense{}  // empty return []
+		for rows.Next() {
+			var e Expense
+			err := rows.Scan(&e.ID, &e.Amount, &e.Category, &e.Note, &e.SpentOn, &e.CreatedAt)
+			if err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "failed to scan row")
+				return
+			}
+			expenses = append(expenses, e)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(expenses)
+	}
+}
