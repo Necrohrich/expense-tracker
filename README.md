@@ -15,6 +15,10 @@
 - writeJSONError() helper for consistent error responses — used across multiple handlers 
   (POST, PATCH, GET/{id}, DELETE all need the same "400/404 + JSON error body" shape), 
   so extracting it avoids repeating the same 3 lines each time
+- requests.http (VS Code REST Client) checked into the repo instead of Postman/Swagger — 
+  zero setup for the reviewer (no separate app, no import step), doubles as living API 
+  documentation, and lets me demo every endpoint live during the interview by just clicking 
+  "Send Request" next to each one
 
 ## What I'd Improve With More Time
 - Amount stored as float64, not integer cents / decimal — known precision risk for financial data, acceptable for this scope

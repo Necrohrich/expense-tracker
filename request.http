@@ -1,0 +1,4 @@
+POST http://localhost:8080/expenses
+Content-Type: application/json
+
+{"amount": 24.50, "category": "food", "note": "Lunch", "spent_on": "2026-05-08"}
