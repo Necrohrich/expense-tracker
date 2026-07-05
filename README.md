@@ -1,7 +1,17 @@
 # Expense Tracker API
 
 ## How to Run
-- Docker: `docker build -t expense-tracker .` then `docker run -p 8080:8080 -v ${PWD}/expenses.db:/app/expenses.db expense-tracker`
+1. `go mod download`
+2. `go run .` — starts on :8080 (or PORT env var)
+3. `go test ./...` — runs tests
+
+Environment variables (optional):
+- `PORT` — server port (default: 8080)
+- `DB_PATH` — SQLite file path (default: expenses.db)
+
+Docker:
+- `docker build -t expense-tracker .`
+- `docker run -p 8080:8080 -v ${PWD}/expenses.db:/app/expenses.db expense-tracker`
 
 ## Tech Choices
 - Go 1.26, stdlib net/http (1.22+ method+path routing) — no framework, API surface too small to justify Gin/Chi
@@ -22,9 +32,9 @@
 - Logging via middleware wrapping the whole mux (Decorator pattern), not per-handler calls — avoids repeating logging code in all 6 handlers. Captures status code by wrapping http.ResponseWriter in a statusRecorder that intercepts WriteHeader(), since the interface itself exposes no way to read back what was already written
 
 ## What I'd Improve With More Time
+- Only one test written (amount validation on POST /expenses) — chosen because it's the one validation rule the spec explicitly calls out as mandatory ("do not skip"). With more time I'd add tests for: 404 handling on GET/PATCH/DELETE with non-existent id, the RETURNING-based PATCH update itself, and the GROUP BY logic in /summary
 - Amount stored as float64, not integer cents / decimal — known precision risk for financial data, acceptable for this scope
-- No index on spent_on — ORDER BY currently requires an in-memory sort; fine at this scale, 
-  would add an index for larger datasets
+- No index on spent_on — ORDER BY currently requires an in-memory sort; fine at this scale, would add an index for larger datasets
 - Pagination doesn't return total count/page metadata (e.g. total_pages) — client can't tell if there are more pages without requesting page+1 and checking for an empty result
 
 ## Assumptions
