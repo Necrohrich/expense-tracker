@@ -21,6 +21,10 @@ Docker:
 - Go 1.26, stdlib net/http (1.22+ method+path routing) — no framework, API surface too small to justify Gin/Chi
 - modernc.org/sqlite — pure-Go driver, no CGO, keeps "single command to run" true on any machine
 - google/uuid for IDs — chosen over auto-increment despite worse B-Tree insert locality (random vs sequential keys); scale is a single local user, so the tradeoff is irrelevant in practice, UUID reads cleaner as a public identifier
+- PATCH uses SQLite's RETURNING clause (available since SQLite 3.35, 2021) to update and re-fetch the row in one round-trip, instead of separate UPDATE + SELECT queries
+- UpdateExpenseRequest uses pointer fields (*float64, *string) to distinguish "field omitted" (nil) from "field explicitly cleared" (non-nil, zero value) — required for true partial updates
+- DELETE checks RowsAffected() for existence, since a DELETE on a non-existent id succeeds silently in SQL (0 rows affected) rather than returning an error
+- `[]Expense{}` initialization ensures GET /expenses returns `[]` (not `null`) for an empty result set — Go's nil slice serializes to `null`, which most API clients don't expect
 
 ## What I'd Improve With More Time
 - Only one test written (amount validation on POST /expenses) — chosen because it's the one validation rule the spec explicitly calls out as mandatory ("do not skip"). With more time I'd add tests for: 404 handling on GET/PATCH/DELETE with non-existent id, the RETURNING-based PATCH update itself, and the GROUP BY logic in /summary

@@ -7,6 +7,7 @@ type CreateExpenseRequest struct {
     SpentOn  string  `json:"spent_on"`
 }
 
+// pointer allows distinguishing "field omitted" (nil) from "field explicitly cleared" (empty string)
 type UpdateExpenseRequest struct {
     Amount   *float64 `json:"amount,omitempty"`
     Category *string  `json:"category,omitempty"`

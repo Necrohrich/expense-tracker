@@ -153,7 +153,7 @@ func deleteExpenseHandler(db *sql.DB) http.HandlerFunc {
 			writeJSONError(w, http.StatusInternalServerError, "failed to check delete result")
 			return
 		}
-
+		// RowsAffected == 0 means no row matched this id — DELETE succeeds silently on SQL level otherwise
 		if rowsAffected == 0 {
 			writeJSONError(w, http.StatusNotFound, "expense not found")
 			return
@@ -205,6 +205,7 @@ func updateExpenseHandler(db *sql.DB) http.HandlerFunc {
         }
 
         args = append(args, id)
+		// RETURNING avoids a second SELECT round-trip after UPDATE
         query := "UPDATE expenses SET " + strings.Join(setClauses, ", ") +
             " WHERE id = ? RETURNING id, amount, category, note, spent_on, created_at"
 
