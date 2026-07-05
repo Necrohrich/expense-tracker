@@ -19,6 +19,7 @@
 - go.mod/go.sum copied and go mod download run before copying the rest of the source, so dependency downloads stay cached across builds when only application code changes
 - PORT and DB_PATH configurable via environment variables (os.Getenv), falling back to sensible defaults (8080, expenses.db) when unset — no config file/library needed for just two values
 - GET /expenses supports ?page=&limit= query params, defaulting to page=1/limit=20 when absent or invalid — invalid values fall back silently rather than erroring, since pagination affects display only, not data integrity (unlike amount validation on writes)
+- Logging via middleware wrapping the whole mux (Decorator pattern), not per-handler calls — avoids repeating logging code in all 6 handlers. Captures status code by wrapping http.ResponseWriter in a statusRecorder that intercepts WriteHeader(), since the interface itself exposes no way to read back what was already written
 
 ## What I'd Improve With More Time
 - Amount stored as float64, not integer cents / decimal — known precision risk for financial data, acceptable for this scope

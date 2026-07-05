@@ -32,5 +32,5 @@ func main() {
 	mux.HandleFunc("GET /expenses/summary", getSummaryHandler(db))
 
 	log.Println("Server starting on :" + port)
-	log.Fatal(http.ListenAndServe(":"+port, mux))
+	log.Fatal(http.ListenAndServe(":"+port, loggingMiddleware(mux)))
 }
