@@ -31,6 +31,11 @@ Docker:
 ## Assumptions
 - spent_on stored as string (YYYY-MM-DD), validated at two layers: SQL CHECK(GLOB) catches malformed format at the DB level, application-layer time.Parse (handlers.go, WIP) catches invalid-but-well-formatted dates like 2026-13-45
 
+## Ambiguity Handled
+The spec doesn't state whether `spent_on` can be changed via PATCH — the endpoint 
+description lists only "amount, category, or note". Decision: `spent_on` is treated as 
+immutable after creation (not accepted by `UpdateExpenseRequest`), since a purchase date is a historical fact about the transaction, not something that should change after the fact. If editable, it would need the same two-layer validation (GLOB + time.Parse) already used on creation.
+
 ## Debugging Notes
 - Spent ~20 min on a false-negative SQL CHECK constraint: SQLite's GLOB operator uses `?` as the single-character wildcard, not `_` (that's LIKE's syntax) — `_` in GLOB is a literal character. The constraint `CHECK(spent_on GLOB '____-__-__')` silently rejected every valid date. Fixed to `'????-??-??'
 - Spent ~15 min on spent_on/created_at coming back as full timestamps (e.g. "2026-05-08T00:00:00Z" instead of "2026-05-08") despite being stored as plain strings. Root cause: SQLite type affinity — columns declared as DATE/DATETIME caused the driver to auto-convert to time.Time on read, which database/sql then reformatted as RFC3339. Fixed by declaring both columns as TEXT, matching how they're actually used (plain strings, validated at the application layer).
