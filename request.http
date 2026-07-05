@@ -15,17 +15,23 @@ Content-Type: application/json
 
 {"amount": 100, "category": "furniture", "spent_on": "2026-02-12"}
 
+### Invalid amount (should be 400)
+POST http://localhost:8080/expenses
+Content-Type: application/json
+
+{"amount": -5, "category": "food", "spent_on": "2026-05-08"}
+
 ### 
 GET http://localhost:8080/expenses
 
 ### Existing id
-GET http://localhost:8080/expenses/c48e7d4d-097c-48cf-b06a-8ff3b53566ce
+GET http://localhost:8080/expenses/c83312d3-3946-4856-8722-ae4a93016433
 
 ### Non-existing id  
 GET http://localhost:8080/expenses/00000000-0000-0000-0000-000000000000
 
 ### Updated by id 
-PATCH http://localhost:8080/expenses/c48e7d4d-097c-48cf-b06a-8ff3b53566ce
+PATCH http://localhost:8080/expenses/c83312d3-3946-4856-8722-ae4a93016433
 Content-Type: application/json
 
 {"amount": 50.50}
@@ -43,7 +49,10 @@ Content-Type: application/json
 {}
 
 ### Delete by id 
-DELETE http://localhost:8080/expenses/c48e7d4d-097c-48cf-b06a-8ff3b53566ce
+DELETE http://localhost:8080/expenses/c83312d3-3946-4856-8722-ae4a93016433
+
+### Delete same id again (should be 404)
+DELETE http://localhost:8080/expenses/c83312d3-3946-4856-8722-ae4a93016433
 
 ### Summary by category
 GET http://localhost:8080/expenses/summary
