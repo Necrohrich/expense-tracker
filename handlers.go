@@ -72,6 +72,33 @@ func createExpenseHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func getHealthHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := db.Ping()
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "database connection failed")
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"status": "healthy", "timestamp": time.Now().UTC().Format(time.RFC3339)})
+	}
+}
+
+func getExpensesCountHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var totalCount int64
+		err := db.QueryRow("SELECT COUNT(*) FROM expenses WHERE deleted_at IS NOT NULL").Scan(&totalCount)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to count expenses")
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]int64{"count": totalCount})
+	}
+}
+
 func getExpensesHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		pageStr := r.URL.Query().Get("page")
@@ -88,17 +115,39 @@ func getExpensesHandler(db *sql.DB) http.HandlerFunc {
 
 		offset := (page - 1) * limit
 
-		rows, err := db.Query(
-			"SELECT id, amount, category, note, spent_on, created_at FROM expenses ORDER BY spent_on DESC LIMIT ? OFFSET ?",
-			limit, offset,
-		)
+		whereClause := ""
+		includeDeleted := r.URL.Query().Get("include_deleted")
+		if includeDeleted != "true" {
+			whereClause = " WHERE deleted_at IS NULL"
+		}
+
+		countQuery := "SELECT COUNT(*) FROM expenses" + whereClause
+		var totalCount int64
+		err = db.QueryRow(countQuery).Scan(&totalCount)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to count expenses")
+			return
+		}
+
+		var totalPages int
+		if totalCount > 0 {
+			totalPages = int((totalCount + int64(limit) - 1) / int64(limit))
+		} else {
+			totalPages = 0
+		}
+
+		selectQuery := "SELECT id, amount, category, note, spent_on, created_at FROM expenses" + 
+			whereClause + 
+			" ORDER BY spent_on DESC LIMIT ? OFFSET ?"
+
+		rows, err := db.Query(selectQuery, limit, offset)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "failed to fetch expenses")
-            return
+			return
 		}
 		defer rows.Close()
 
-		expenses := []Expense{}  // empty return []
+		expenses := []Expense{} 
 		for rows.Next() {
 			var e Expense
 			err := rows.Scan(&e.ID, &e.Amount, &e.Category, &e.Note, &e.SpentOn, &e.CreatedAt)
@@ -109,10 +158,19 @@ func getExpensesHandler(db *sql.DB) http.HandlerFunc {
 			expenses = append(expenses, e)
 		}
 
+		response := ExpensePaginationResponse{
+			Expenses:    expenses,
+			Limit:       limit,
+			Offset:      offset,
+			CurrentPage: page,
+			TotalPages:  totalPages,
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-        json.NewEncoder(w).Encode(expenses)
+		json.NewEncoder(w).Encode(response)
 	}
 }
+
 
 func getExpenseHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +178,7 @@ func getExpenseHandler(db *sql.DB) http.HandlerFunc {
 
 		var e Expense
 		err := db.QueryRow(
-            "SELECT id, amount, category, note, spent_on, created_at FROM expenses WHERE id = ?",
+            "SELECT id, amount, category, note, spent_on, created_at FROM expenses WHERE id = ? AND deleted_at IS NOT NULL",
             id,
         ).Scan(&e.ID, &e.Amount, &e.Category, &e.Note, &e.SpentOn, &e.CreatedAt)
 
@@ -135,6 +193,41 @@ func getExpenseHandler(db *sql.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
         json.NewEncoder(w).Encode(e)
+	}
+}
+
+func getSearchExpensesHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query().Get("query")
+
+		if query == "" {
+			writeJSONError(w, http.StatusBadRequest, "query parameter is required")
+			return
+		}
+
+		rows, err := db.Query(
+			"SELECT id, amount, category, note, spent_on, created_at FROM expenses WHERE (category LIKE ? OR note LIKE ?) AND deleted_at IS NOT NULL ORDER BY spent_on DESC",
+			"%"+ strings.ToLower(query) +"%", "%"+ strings.ToLower(query) +"%",
+		)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to fetch expenses")
+			return
+		}
+		defer rows.Close()
+
+		expenses := []Expense{}
+		for rows.Next() {
+			var e Expense
+			err := rows.Scan(&e.ID, &e.Amount, &e.Category, &e.Note, &e.SpentOn, &e.CreatedAt)
+			if err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "failed to scan row")
+				return
+			}
+			expenses = append(expenses, e)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(expenses)
 	}
 }
 
@@ -162,6 +255,45 @@ func deleteExpenseHandler(db *sql.DB) http.HandlerFunc {
         w.WriteHeader(http.StatusNoContent) // 204
     }
 }
+
+func softDeleteExpenseHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+
+		var e Expense
+		var deletedAt sql.NullString
+		now := time.Now().UTC()
+
+		query := `
+			UPDATE expenses 
+			SET deleted_at = $1 
+			WHERE id = $2 AND deleted_at IS NULL 
+			RETURNING id, amount, category, note, spent_on, created_at, deleted_at`
+
+		err := db.QueryRow(query, now, id).Scan(
+			&e.ID, &e.Amount, &e.Category, &e.Note, &e.SpentOn, &e.CreatedAt, &deletedAt,
+		)
+
+		if errors.Is(err, sql.ErrNoRows) {
+			writeJSONError(w, http.StatusNotFound, "expense not found or already deleted")
+			return
+		}
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to soft-delete expense")
+			return
+		}
+
+		if deletedAt.Valid {
+			e.DeletedAt = &deletedAt.String
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(e)
+	}
+}
+
+
 
 func updateExpenseHandler(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {

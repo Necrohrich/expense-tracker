@@ -7,4 +7,5 @@ type Expense struct {
 	Note     string  `json:"note,omitempty"`
 	SpentOn  string  `json:"spent_on"` // change to time.Parse("2006-01-02", spentOn) in future
 	CreatedAt string `json:"created_at"`
+	DeletedAt *string `json:"deleted_at,omitempty"`
 }
