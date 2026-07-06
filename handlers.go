@@ -88,7 +88,7 @@ func getHealthHandler(db *sql.DB) http.HandlerFunc {
 func getExpensesCountHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var totalCount int64
-		err := db.QueryRow("SELECT COUNT(*) FROM expenses WHERE deleted_at IS NOT NULL").Scan(&totalCount)
+		err := db.QueryRow("SELECT COUNT(*) FROM expenses WHERE deleted_at IS NULL").Scan(&totalCount)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "failed to count expenses")
 			return
@@ -178,7 +178,7 @@ func getExpenseHandler(db *sql.DB) http.HandlerFunc {
 
 		var e Expense
 		err := db.QueryRow(
-            "SELECT id, amount, category, note, spent_on, created_at FROM expenses WHERE id = ? AND deleted_at IS NOT NULL",
+            "SELECT id, amount, category, note, spent_on, created_at FROM expenses WHERE id = ? AND deleted_at IS NULL",
             id,
         ).Scan(&e.ID, &e.Amount, &e.Category, &e.Note, &e.SpentOn, &e.CreatedAt)
 
@@ -206,7 +206,7 @@ func getSearchExpensesHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		rows, err := db.Query(
-			"SELECT id, amount, category, note, spent_on, created_at FROM expenses WHERE (category LIKE ? OR note LIKE ?) AND deleted_at IS NOT NULL ORDER BY spent_on DESC",
+			"SELECT id, amount, category, note, spent_on, created_at FROM expenses WHERE (category LIKE ? OR note LIKE ?) AND deleted_at IS NULL ORDER BY spent_on DESC",
 			"%"+ strings.ToLower(query) +"%", "%"+ strings.ToLower(query) +"%",
 		)
 		if err != nil {
