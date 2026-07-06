@@ -13,3 +13,12 @@ type UpdateExpenseRequest struct {
     Category *string  `json:"category,omitempty"`
     Note     *string  `json:"note,omitempty"`
 }
+
+type ExpensePaginationResponse struct 
+{
+    Expenses []Expense `json:"expenses"`
+    Limit        int `json:"limit"`
+	Offset       int   `json:"offset"`
+	CurrentPage  int   `json:"current_page"` 
+	TotalPages   int   `json:"total_pages"`
+}

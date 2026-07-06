@@ -30,6 +30,10 @@ func main() {
 	mux.HandleFunc("DELETE /expenses/{id}", deleteExpenseHandler(db))
 	mux.HandleFunc("PATCH /expenses/{id}", updateExpenseHandler(db))
 	mux.HandleFunc("GET /expenses/summary", getSummaryHandler(db))
+	mux.HandleFunc("GET /health", getHealthHandler(db))
+	mux.HandleFunc("GET /expenses/count", getExpensesCountHandler(db))
+	mux.HandleFunc("GET /expenses/search", getSearchExpensesHandler(db))
+	mux.HandleFunc("PATCH /expenses/{id}/soft-delete", softDeleteExpenseHandler(db))
 
 	log.Println("Server starting on :" + port)
 	log.Fatal(http.ListenAndServe(":"+port, loggingMiddleware(mux)))
